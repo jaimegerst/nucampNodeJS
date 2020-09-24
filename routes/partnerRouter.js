@@ -1,50 +1,79 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const Partner = require('../models/partner');
+const authenticate = require('../authenticate');
 
 const partnerRouter = express.Router();
 
 partnerRouter.use(bodyParser.json());
 
 partnerRouter.route('/')
-.all((req, res, next) => {
-    res.statusCode = 200;
-    res.setHeader('Content-Type', 'text/plain');
-    next();
+.get((req, res, next) => {
+    Partner.find()
+    .then(partners => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(partners);
+    })
+    .catch(err => next(err));
 })
-.get((req, res) => {
-    res.end('Will send all the partners to you');
+.post(authenticate.verifyUser, (req, res, next) => {
+    Partner.create(req.body)
+    .then(partner => {
+        console.log('Partner Created ', partner);
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(partner);
+    })
+    .catch(err => next(err));
 })
-.post((req, res) => {
-    res.end(`Will add the partners: ${req.body.name} with description: ${req.body.description}`);
-})
-.put((req, res) => {
+.put(authenticate.verifyUser, (req, res) => {
     res.statusCode = 403;
     res.end('PUT operation not supported on /partners');
 })
-.delete((req, res) => {
-    res.end('Deleting all partners');
+.delete(authenticate.verifyUser, (req, res, next) => {
+    Partner.deleteMany()
+    .then(response => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(response);
+    })
+    .catch(err => next(err));
 });
 
 partnerRouter.route('/:partnerId')
-.all((req, res, next) => {
-    res.statusCode = 200;
-    res.setHeader('Content-Type', 'text/plain');
-    next();
+.get((req, res, next) => {
+    Partner.findById(req.params.partnerId)
+    .then(partner => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(partner);
+    })
+    .catch(err => next(err));
 })
-.get((req, res) => {
-    res.end(`Will send details of the partners: ${req.params.partnersId} to you`);
-})
-.post((req, res) => {
+.post(authenticate.verifyUser, (req, res) => {
     res.statusCode = 403;
-    res.end(`POST operation not supported on /partners/${req.params.partnersId}`);
+    res.end(`POST operation not supported on /partners/${req.params.partnerId}`);
 })
-.put((req, res) => {
-    res.write(`Updating the partners: ${req.params.partnersId}\n`);
-    res.end(`Will update the partners: ${req.body.name}
-        with description: ${req.body.description}`);
+.put(authenticate.verifyUser, (req, res, next) => {
+    Partner.findByIdAndUpdate(req.params.partnerId, {
+        $set: req.body
+    }, { new: true })
+    .then(partner => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(partner);
+    })
+    .catch(err => next(err));
 })
-.delete((req, res) => {
-    res.end(`Deleting partners: ${req.params.partnersId}`);
+.delete(authenticate.verifyUser, (req, res, next) => {
+    Partner.findByIdAndDelete(req.params.partnerId)
+    .then(response => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(response);
+    })
+    .catch(err => next(err));
 });
 
 module.exports = partnerRouter;
